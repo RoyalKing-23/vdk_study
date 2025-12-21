@@ -4,19 +4,23 @@ import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 
 const REFRESH_API_PATH = "/api/TokenManager/refreshTokens";
+// Safely access env vars
 const REFRESH_API_KEY = process.env.REFRESH_API_KEY;
-const PUBLIC_API_PATHS = ["/api/auth"];
+// Add track-anon to public paths to prevent loops
+const PUBLIC_API_PATHS = ["/api/auth", "/api/track-anon"];
 const ADMIN_API_PATHS = ["/api/admin"];
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET!);
-const baseUrl = process.env.BASE_URL;
-if (!baseUrl) {
-  throw new Error("Missing BASE_URL environment variable error in middleware!");
-}
-const isPublicApi = (pathname: string) =>
-  PUBLIC_API_PATHS.some((publicPath) => pathname.startsWith(publicPath));
 
-const isAdminApi = (pathname: string) =>
-  ADMIN_API_PATHS.some((adminPath) => pathname.startsWith(adminPath));
+// Helper to get SECRET safely
+function getSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) {
+    console.error("JWT_SECRET is not set");
+    return new TextEncoder().encode("fallback_secret_to_prevent_crash_but_auth_will_fail");
+  }
+  return new TextEncoder().encode(secret);
+}
+
+const SECRET = getSecret();
 
 // Add a web-compatible UUID v4 generator
 function generateUUIDv4() {
@@ -29,7 +33,7 @@ function generateUUIDv4() {
 }
 
 // Helper to get or set anon_id cookie
-async function getOrSetAnonId(req: NextRequest, res?: NextResponse) {
+async function getOrSetAnonId(req: NextRequest, baseUrl: string, res?: NextResponse) {
   let anon_id = req.cookies.get("anon_id")?.value;
   if (!anon_id) {
     anon_id = generateUUIDv4();
@@ -41,21 +45,27 @@ async function getOrSetAnonId(req: NextRequest, res?: NextResponse) {
     }
 
     // Track anon (fire and forget)
-    await fetch(`${baseUrl}/api/track-anon`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        anon_id,
-        useragent: req.headers.get("user-agent"),
-        ip: "",
-      }),
-      keepalive: true,
-    });
+    try {
+      await fetch(`${baseUrl}/api/track-anon`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          anon_id,
+          useragent: req.headers.get("user-agent"),
+          ip: "",
+        }),
+        keepalive: true,
+      });
+    } catch (err) {
+      console.error("Failed to track anon user:", err);
+    }
   }
   return anon_id;
 }
 
 export async function middleware(req: NextRequest) {
+  // Determine Base URL dynamically if not set
+  const baseUrl = process.env.BASE_URL || req.nextUrl.origin;
 
   const { pathname } = req.nextUrl;
   const adminToken = req.cookies.get("admin_token")?.value;
@@ -114,67 +124,10 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Batch verification for /study/batches/[batchid] and subpages
-  // const batchMatch = pathname.match(/^\/study\/batches\/([^\/]+)(?:\/|$)/);
-  // if (batchMatch) {
-  //   let res = NextResponse.next();
-  //   const batchId = batchMatch[1];
-  //   const anon_id = await getOrSetAnonId(req, res);
-  //   // Call check-verification API
-  //   try {
-  //     // Fetch user info from /api/AboutMe
-  //     const aboutRes = await fetch(`${baseUrl}/api/AboutMe`, {
-  //       method: "GET",
-  //       headers: {
-  //         cookie: req.headers.get("cookie") || "",
-  //       },
-  //     });
-
-  //     if (!aboutRes.ok) {
-  //       throw new Error("Failed to fetch /api/AboutMe");
-  //     }
-
-  //     const aboutJson = await aboutRes.json();
-  //     const tag = aboutJson?.user?.tag;
-
-  //     // Only check verification if tag is "user" or missing`${baseUrl}/api/auth/check-verification`
-  //     if (!tag || tag === "user") {
-  //       const apiRes = await fetch(`${baseUrl}/api/auth/check-verification`,
-  //         {
-  //           method: "POST",
-  //           headers: { "Content-Type": "application/json" },
-  //           body: JSON.stringify({ anon_id, batchId }),
-  //         }
-  //       );
-
-  //       if (!apiRes.ok) {
-  //         throw new Error("Failed to check verification");
-  //       }
-
-  //       const verification = await apiRes.json();
-
-  //       if (!verification || verification.verified !== true) {
-  //         const url = req.nextUrl.clone();
-  //         url.pathname = "/key-generate";
-  //         url.searchParams.set("anon_id", anon_id);
-  //         url.searchParams.set("batchId", batchId);
-  //         return NextResponse.redirect(url);
-  //       }
-  //     } else {
-  //       console.log("User Tag:" + tag + ": skipping verifications");
-  //     }
-  //   } catch (err) {
-  //     console.error("Middleware error:", err);
-  //     const url = req.nextUrl.clone();
-  //     url.pathname = "/key-generate";
-  //     url.searchParams.set("anon_id", anon_id);
-  //     url.searchParams.set("batchId", batchId);
-  //     return NextResponse.redirect(url);
-  //   }
-  //   return res;
-  // }
-
   const isApi = pathname.startsWith("/api/");
+  const isPublicApi = (path: string) => PUBLIC_API_PATHS.some((publicPath) => path.startsWith(publicPath));
+  const isAdminApi = (path: string) => ADMIN_API_PATHS.some((adminPath) => path.startsWith(adminPath));
+
   const isProtectedApi = isApi && !(isPublicApi(pathname) || isAdminApi(pathname));
   const isStudyPage = pathname.startsWith("/study");
   const isWatchPage = pathname.startsWith("/watch");
@@ -186,37 +139,6 @@ export async function middleware(req: NextRequest) {
 
     try {
       await jwtVerify(token, SECRET);
-
-      // ✅ Inserted Telegram Check (only for /study/**)
-      if (isStudyPage) {
-        // try {
-        //   const url = `${baseUrl}/api/CheckTgStatus`;
-
-
-
-
-        //   const tgRes = await fetch(url, {
-        //     method: "GET",
-        //     headers: {
-        //       cookie: req.headers.get("cookie") || "",
-        //     },
-        //   });
-
-        //   const tgJson = await tgRes.json();
-
-        //   if (!tgJson.success) {
-        //     // const url = req.nextUrl.clone();
-        //     // url.pathname = "/check";
-        //     // return NextResponse.redirect(url);
-        //   }
-        // } catch (tgErr) {
-        //   console.error("Telegram check failed:", tgErr);
-        //   const url = req.nextUrl.clone();
-        //   url.pathname = "/check";
-        //   return NextResponse.redirect(url);
-        // }
-      }
-
       return NextResponse.next();
     } catch (err: any) {
       console.warn("JWT invalid or expired:", err);

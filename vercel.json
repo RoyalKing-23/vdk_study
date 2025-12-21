@@ -1,0 +1,14 @@
+{
+    "framework": "nextjs",
+    "functions": {
+        "api/**/*": {
+            "maxDuration": 60
+        },
+        "app/api/**/*": {
+            "maxDuration": 60
+        },
+        "pages/api/**/*": {
+            "maxDuration": 60
+        }
+    }
+}

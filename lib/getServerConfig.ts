@@ -7,7 +7,16 @@ export async function getServerConfig() {
         const config = await ServerConfig.findOne({ _id: 1 }).lean();
 
         if (!config) {
-            return null;
+            console.warn("[getServerConfig] Config not found in DB, using defaults.");
+            return {
+                webName: "VDK Study",
+                sidebarLogoUrl: "https://i.ibb.co/3Wqj2jV/logo.png",
+                sidebarTitle: "VDK Study",
+                tg_channel: "https://t.me/VaradKw",
+                tg_username: "VaradKw",
+                isDirectLoginOpen: true,
+                tg_bot: "VaradBot"
+            };
         }
 
         // We only need specific fields as per the original API
@@ -37,6 +46,14 @@ export async function getServerConfig() {
         };
     } catch (error) {
         console.error("Error getting server config:", error);
-        return null;
+        return {
+            webName: "VDK Study",
+            sidebarLogoUrl: "https://i.ibb.co/3Wqj2jV/logo.png",
+            sidebarTitle: "VDK Study",
+            tg_channel: "https://t.me/VaradKw",
+            tg_username: "VaradKw",
+            isDirectLoginOpen: true,
+            tg_bot: "VaradBot"
+        };
     }
 }

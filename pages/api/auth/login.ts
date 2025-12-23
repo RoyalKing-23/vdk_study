@@ -2,10 +2,10 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import dbConnect from "@/lib/mongodb";
 import User from "@/models/User";
 import ServerConfig from "@/models/ServerConfig";
-import { getHeaders } from "@/utils/auth";
+// import { getHeaders } from "@/utils/auth"; // Removed unused import
 
 import jwt from "jsonwebtoken";
-import { v4 as uuidv4 } from "uuid";
+// import { v4 as uuidv4 } from "uuid"; // Removed external dependency
 import crypto from "crypto";
 
 type Data = { success: boolean; message: string };
@@ -13,6 +13,18 @@ type Data = { success: boolean; message: string };
 const TELEGRAM_BOT_TOKEN = "8124407694:AAFHNHL5NOWvkwqeYNp5MmwLVshumBjU07o";
 const TELEGRAM_CHANNEL_ID = "-1002959186885";
 const BASE_URL = process.env.PW_API;
+
+function generateUUID() {
+  if (typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  // Fallback
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, function (c) {
+    const r = (Math.random() * 16) | 0,
+      v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
 async function sendTelegramLog(message: string) {
   try {
     const url = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage`;
@@ -112,7 +124,7 @@ export default async function handler(
           "client-id": "5eb393ee95fab7468a79d189",
           "client-type": "WEB",
           "client-version": "2.1.1",
-          "randomid": uuidv4(),
+          "randomid": generateUUID(),
         },
         body: JSON.stringify({
           username: phoneNumber,

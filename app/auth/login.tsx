@@ -125,22 +125,31 @@ export default function Login() {
         body: JSON.stringify({ phoneNumber: phone }),
       });
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        setError(data.message || "OTP request failed");
-        toast.error(data.message || "OTP request failed");
+      let data;
+      const contentType = res.headers.get("content-type");
+      if (contentType && contentType.indexOf("application/json") !== -1) {
+        data = await res.json();
+      } else {
+        const text = await res.text();
+        console.error("Non-JSON response:", text);
+        throw new Error(text || "Server returned non-JSON response");
+      }
 
+      if (!res.ok || !data.success) {
+        const msg = data.message || "OTP request failed";
+        setError(msg);
+        toast.error(msg);
         return;
       }
       if (data.success) {
         toast.success(data.message || "Otp Sent!");
-
       }
       setStep("otp");
     } catch (err: any) {
-      console.error(err);
-      setError("An error occurred while sending OTP.");
-      toast.error("An error occurred while sending OTP.");
+      console.error("Login error client:", err);
+      const msg = err.message || "An error occurred while sending OTP.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

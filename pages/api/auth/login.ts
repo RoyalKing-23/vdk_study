@@ -107,7 +107,13 @@ export default async function handler(
       "https://api.penpencil.co/v1/users/get-otp?smsType=0&fallback=true",
       {
         method: "POST",
-        headers: { ...getHeaders(""), "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "client-id": "5eb393ee95fab7468a79d189",
+          "client-type": "WEB",
+          "client-version": "2.1.1",
+          "randomid": uuidv4(),
+        },
         body: JSON.stringify({
           username: phoneNumber,
           countryCode: "+91",

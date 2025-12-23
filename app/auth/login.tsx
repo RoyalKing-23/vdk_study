@@ -35,7 +35,17 @@ export default function Login() {
           const data = await res.json();
           setServerInfo(data);
         } catch (err) {
-          setError("Could not load server info");
+          console.error("Failed to load server info, utilizing defaults", err);
+          // Fallback to defaults client-side if API fails
+          setServerInfo({
+            webName: "VDK Study",
+            sidebarLogoUrl: "https://i.ibb.co/3Wqj2jV/logo.png",
+            sidebarTitle: "VDK Study",
+            tg_channel: "https://t.me/VaradKw",
+            tg_username: "VaradKw",
+            isDirectLoginOpen: true,
+            tg_bot: "VaradBot"
+          });
         }
       }
       fetchServerInfo();
@@ -122,7 +132,7 @@ export default function Login() {
 
         return;
       }
-      if(data.success){
+      if (data.success) {
         toast.success(data.message || "Otp Sent!");
 
       }
@@ -162,7 +172,7 @@ export default function Login() {
         toast.error(data.message || "OTP verification failed");
         return;
       }
-      if(data.success){
+      if (data.success) {
         toast.success(data.message || "Otp Verified!");
 
       }
@@ -282,10 +292,10 @@ export default function Login() {
             {loading
               ? "Please wait..."
               : verified
-              ? "Verified"
-              : step === "phone"
-              ? "Send OTP"
-              : "Verify OTP"}
+                ? "Verified"
+                : step === "phone"
+                  ? "Send OTP"
+                  : "Verify OTP"}
           </button>
         </div>
         <p className="text-xs text-center text-gray-500">
@@ -294,54 +304,54 @@ export default function Login() {
         </p>
         {/* Bot Authorization Info */}
         {!isDirectLogin &&
-        (
-          <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/40 rounded-lg p-4 mb-4">
-            <div className="flex items-start space-x-3">
-              <div className="flex-shrink-0">
-                <svg
-                  className="w-5 h-5 text-blue-400 mt-0.5"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h3 className="text-sm font-semibold text-blue-300 mb-2 inline-flex">
-                  <LucideTriangleAlert
-                    size={17}
-                    className="mr-2"
-                    color="#bfbd4e"
-                  />{" "}
-                  Authorization Required
-                </h3>
-                <p className="text-xs text-blue-200 leading-relaxed mb-3">
-                  Before logging in, you need to authorize yourself with our bot
-                  first.
-                </p>
-                <div className="flex items-center gap-4">
-                  <span className="text-xs text-blue-300">Bot Username:</span>
-                  <a
-                    href={`https://telegram.me/${botUsername?.replace(
-                      "@",
-                      ""
-                    )}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="font-mono text-blue-100 bg-blue-900/50 px-2 py-1 rounded text-xs hover:bg-blue-800/70 transition-colors"
+          (
+            <div className="bg-gradient-to-r from-blue-900/30 to-purple-900/30 border border-blue-500/40 rounded-lg p-4 mb-4">
+              <div className="flex items-start space-x-3">
+                <div className="flex-shrink-0">
+                  <svg
+                    className="w-5 h-5 text-blue-400 mt-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
                   >
-                    {botUsername}
-                  </a>
+                    <path
+                      fillRule="evenodd"
+                      d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h3 className="text-sm font-semibold text-blue-300 mb-2 inline-flex">
+                    <LucideTriangleAlert
+                      size={17}
+                      className="mr-2"
+                      color="#bfbd4e"
+                    />{" "}
+                    Authorization Required
+                  </h3>
+                  <p className="text-xs text-blue-200 leading-relaxed mb-3">
+                    Before logging in, you need to authorize yourself with our bot
+                    first.
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-blue-300">Bot Username:</span>
+                    <a
+                      href={`https://telegram.me/${botUsername?.replace(
+                        "@",
+                        ""
+                      )}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-mono text-blue-100 bg-blue-900/50 px-2 py-1 rounded text-xs hover:bg-blue-800/70 transition-colors"
+                    >
+                      {botUsername}
+                    </a>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )
-      }
+          )
+        }
       </form>
     </div>
   );
